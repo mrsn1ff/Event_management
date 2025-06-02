@@ -85,61 +85,64 @@ router.get('/all', async (req, res) => {
 });
 
 // Update Event (Protected Route)
+// Get a single event by ID
+router.get('/:id', async (req, res) => {
+  try {
+    const event = await Event.findById(req.params.id);
+    if (!event) return res.status(404).json({ message: 'Event not found' });
+    res.json(event);
+  } catch (err) {
+    res.status(500).json({ message: 'Error fetching event' });
+  }
+});
+
+// Update event
+// Update event
 router.put('/:id', verifyToken, isAdmin, upload.any(), async (req, res) => {
   try {
-    const eventId = req.params.id;
     const { name, date, time, venue } = req.body;
 
-    const event = await Event.findById(eventId);
-    if (!event) return res.status(404).json({ message: 'Event not found' });
-
-    // Update fields
-    if (name) event.name = name;
-    if (date) event.date = date;
-    if (time) event.time = time;
-    if (venue) event.venue = venue;
-
-    // If new image uploaded, replace it
-    if (req.files && req.files.length > 0) {
-      const newImage = `/uploads/${req.files[0].filename}`;
-
-      // Remove old image if exists
-      if (event.image && fs.existsSync('.' + event.image)) {
-        fs.unlinkSync('.' + event.image);
-      }
-
-      event.image = newImage;
+    // Get existing event first
+    const existingEvent = await Event.findById(req.params.id);
+    if (!existingEvent) {
+      return res.status(404).json({ message: 'Event not found' });
     }
 
-    await event.save();
+    // Handle image upload - keep existing image if no new one is uploaded
+    const imageUrl =
+      req.files && req.files.length > 0
+        ? `/uploads/${req.files[0].filename}`
+        : existingEvent.image;
+
+    const updatedData = {
+      name: name || existingEvent.name,
+      date: date || existingEvent.date,
+      time: time || existingEvent.time,
+      venue: venue || existingEvent.venue,
+      image: imageUrl,
+    };
+
+    const event = await Event.findByIdAndUpdate(req.params.id, updatedData, {
+      new: true,
+    });
+
     res.json({ message: 'Event updated successfully', event });
   } catch (err) {
     console.error('Error updating event:', err);
     res
       .status(500)
-      .json({ message: 'Failed to update event', error: err.message });
+      .json({ message: 'Error updating event', error: err.message });
   }
 });
 
-// Delete Event (Protected Route)
+// Delete event
 router.delete('/:id', verifyToken, isAdmin, async (req, res) => {
   try {
-    const eventId = req.params.id;
-    const event = await Event.findById(eventId);
+    const event = await Event.findByIdAndDelete(req.params.id);
     if (!event) return res.status(404).json({ message: 'Event not found' });
-
-    // Delete image if exists
-    if (event.image && fs.existsSync('.' + event.image)) {
-      fs.unlinkSync('.' + event.image);
-    }
-
-    await Event.findByIdAndDelete(eventId);
     res.json({ message: 'Event deleted successfully' });
   } catch (err) {
-    console.error('Error deleting event:', err);
-    res
-      .status(500)
-      .json({ message: 'Failed to delete event', error: err.message });
+    res.status(500).json({ message: 'Error deleting event' });
   }
 });
 

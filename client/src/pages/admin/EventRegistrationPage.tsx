@@ -1,6 +1,6 @@
-import { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
-import axios from "axios";
+import { useEffect, useState } from 'react';
+import { useParams } from 'react-router-dom';
+import axios from 'axios';
 
 interface Registration {
   name: string;
@@ -16,16 +16,18 @@ interface Registration {
 function EventRegistrationPage() {
   const { eventId } = useParams<{ eventId: string }>();
   const [registrations, setRegistrations] = useState<Registration[]>([]);
-  const [eventName, setEventName] = useState("");
+  const [eventName, setEventName] = useState('');
 
   useEffect(() => {
     const fetchRegistrations = async () => {
       try {
-        const response = await axios.get(`http://localhost:5000/api/event/${eventId}`);
+        const apiUrl =
+          process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+        const response = await axios.get(`${apiUrl}/event/${eventId}`);
         setRegistrations(response.data.registrations);
         setEventName(response.data.eventName);
       } catch (error) {
-        console.error("Failed to fetch registrations", error);
+        console.error('Failed to fetch registrations', error);
       }
     };
 

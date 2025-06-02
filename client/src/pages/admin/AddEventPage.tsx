@@ -1,17 +1,38 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import { api } from '../../api/axios';
 import { toast } from 'react-toastify';
 import { CloudUpload, Calendar, MapPin, Ticket, Clock } from 'lucide-react';
 
 const AddEventPage = () => {
+  const { id } = useParams(); // grab ID from URL if editing
+  const navigate = useNavigate();
   const [form, setForm] = useState({
     name: '',
     date: '',
     time: '',
     venue: '',
     image: null as File | null,
+    imageUrl: '',
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Fetch existing event if in edit mode
+  useEffect(() => {
+    if (id) {
+      api.get(`/events/${id}`).then((res) => {
+        const data = res.data;
+        setForm({
+          name: data.name,
+          date: data.date,
+          time: data.time,
+          venue: data.venue,
+          image: null,
+          imageUrl: data.image,
+        });
+      });
+    }
+  }, [id]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.name === 'image') {
@@ -33,16 +54,20 @@ const AddEventPage = () => {
     if (form.image) data.append('image', form.image);
 
     try {
-      await api.post('/events', data, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-      });
-      toast.success('Event added successfully!');
-      setForm({ name: '', date: '', time: '', venue: '', image: null });
+      if (id) {
+        await api.put(`/events/${id}`, data, {
+          headers: { 'Content-Type': 'multipart/form-data' },
+        });
+        toast.success('Event updated!');
+      } else {
+        await api.post('/events', data, {
+          headers: { 'Content-Type': 'multipart/form-data' },
+        });
+        toast.success('Event added!');
+      }
+      navigate('/admin'); // redirect to dashboard
     } catch (err) {
-      toast.error('Error creating event');
-      console.error(err);
+      toast.error('Error saving event');
     } finally {
       setIsSubmitting(false);
     }
@@ -196,6 +221,7 @@ const AddEventPage = () => {
                 'Create Event'
               )}
             </button>
+            <button type="submit">{id ? '' : ''}</button>
           </div>
         </form>
       </div>

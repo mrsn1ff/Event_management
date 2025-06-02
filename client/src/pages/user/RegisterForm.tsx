@@ -42,13 +42,12 @@ const RegisterForm = () => {
     e.preventDefault();
     setIsSubmitting(true);
     try {
-      const res = await axios.post(
-        'http://localhost:5000/api/registrations/register',
-        {
-          ...form,
-          eventId: id,
-        },
-      );
+      const apiUrl =
+        process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+      const res = await axios.post(`${apiUrl}/registrations/register`, {
+        ...form,
+        eventId: id,
+      });
       setQrCode(res.data.data.qrCode);
       setRegistrationId(res.data.data._id);
       setShowConfetti(true);
